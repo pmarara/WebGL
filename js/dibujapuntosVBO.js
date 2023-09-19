@@ -94,11 +94,41 @@ function render(gl){
     // Borrar el canvas
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    const puntos = new Float32Array(clicks);
+    //Calculo el centro del canvas
+    const centerX = 0;
+    const centerY = 0;
+    const maxDistance = Math.sqrt(2);
 
-    gl.uniform3f(colorFragmento,1.0,1.0,0.0);
+    /*Para cada punto saco sus coordenadas, calculo la distancia al centro y la normalizo de 0 a 1. 
+    Después pinto los puntos y las lineas*/
+    for(let i = 0; i< clicks.length; i += 3){
 
-    // Rellenar el buffer con los puntos
-    gl.bufferData(gl.ARRAY_BUFFER,puntos,gl.STATIC_DRAW);
-    gl.drawArrays(gl.POINTS,0,clicks.length/3);
+        //Calculo el color para el punto
+        const x = clicks[i];
+        const y = clicks[i+1];
+        const distanceToCenter = Math.sqrt(Math.pow(x-centerX,2) + Math.pow(y-centerY,2));
+        const normalizedDistance = distanceToCenter/maxDistance;
+        const newColor = [1-normalizedDistance, normalizedDistance, 0.0];
+
+
+        gl.uniform3fv(colorFragmento,newColor);
+
+        // Rellenar el buffer con el punto
+        gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(clicks.slice(i,i+3)),gl.STATIC_DRAW);
+
+        //Pintamos solamente el punto que estamos evaluando
+        gl.drawArrays(gl.POINTS,0,1);
+
+        //En el caso de ser el primer punto no debemos pintar linea
+        if(i!=0){
+
+            //Rellenamos el buffer con el punto y el punto anterior
+            gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(clicks.slice(i-3,i+3)),gl.STATIC_DRAW);
+
+            //Pintamos la linea entre el punto anterior y punto que estamos evaluando
+            gl.drawArrays(gl.LINE_STRIP,0,2);
+               
+        }
+    }
+
 }
