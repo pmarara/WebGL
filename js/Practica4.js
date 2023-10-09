@@ -1,9 +1,8 @@
 /**
- * Practica2.js
+ * Practica4.js
  * 
- * Practica #3 GPC: Introducir controles de la camara además de una cámara
- * ortográfica en la esquina superior izquierda. Estas camaras se reescalan 
- * con el reescalado de la ventana.
+ * Practica #4 GPC: Animar la escena del robot además de añadir 
+ * un interfaz.
  * 
  * @author <pmarara@upv.es, Pablo Martínez Aragón>, 2023
  * 
@@ -13,22 +12,26 @@
 import * as THREE from "../lib/three.module.js"
 import {GLTFLoader} from "../lib/GLTFLoader.module.js"
 import {OrbitControls} from "../lib/OrbitControls.module.js"
+import {GUI} from "../lib/lil-gui.module.min.js"
+import {TWEEN} from "../lib/tween.module.min.js"
 
 
 // Variables de consenso
-let renderer, scene, camera, planta;
+let renderer, scene, camera, planta, effectController;
 
 //Controlador de camara
 let cameraControls;
 
 // Otras globales
-let robot, brazo, mano, antebrazo;
+let robot, base, brazo, mano, antebrazo, pinzaIz, pinzaDe, material;
 const L = 70;
-let angulo = 0;
+let baseX = 0, baseZ = 0;
+
 
 // Acciones
 init();
 loadScene();
+setupGUI();
 render();
 
 function init(){
@@ -44,7 +47,7 @@ function init(){
     //scene.background = new THREE.Color( 1, 1, 1);
 
     //Camara
-    camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 2000);
     camera.position.set( 80, 280, 80);
     cameraControls = new OrbitControls( camera,renderer.domElement);
     cameraControls.target.set( 0,1,0);
@@ -56,12 +59,13 @@ function init(){
 
     //Eventos
     window.addEventListener('resize', updateAspectRatio);
+    window.addEventListener('keydown', movimientoBase);
 }
 
 function loadScene(){
 
     // Material
-    const material = new THREE.MeshNormalMaterial({wireframe: false, flatShading: true, side: THREE.DoubleSide});
+    material = new THREE.MeshNormalMaterial({wireframe: false, flatShading: true, side: THREE.DoubleSide});
     //const material = new THREE.MeshBasicMaterial({color:'red', wireframe: false, side: THREE.DoubleSide});
     const materialSuelo = new THREE.MeshBasicMaterial({color:'blue', wireframe: true});
     const materialVisual = new THREE.MeshBasicMaterial({color:'black', wireframe: true});
@@ -87,11 +91,11 @@ function loadScene(){
     ]
     pinza.setAttribute('position', new THREE.Float32BufferAttribute(coordenadasPinzas,3));
     pinza.setIndex(indicesPinzas);
-    const pinzaIz = new THREE.Mesh( pinza, material);
+    pinzaIz = new THREE.Mesh( pinza, material);
     pinzaIz.position.set(0,10,-10);
     pinzaIz.rotation.x = Math.PI/2;
 
-    const pinzaDe = new THREE.Mesh( pinza, material);
+    pinzaDe = new THREE.Mesh( pinza, material);
     pinzaDe.position.set(0,-10,10);
     pinzaDe.rotation.x = 3*Math.PI/2;
 
@@ -151,7 +155,7 @@ function loadScene(){
     eje.rotation.x = Math.PI/2;
 
     // Construimos el objeto brazo
-    const brazo = new THREE.Object3D();
+    brazo = new THREE.Object3D();
     brazo.add(eje);
     brazo.add(esparrago);
     brazo.add(rotula);
@@ -159,7 +163,7 @@ function loadScene(){
 
     // Construimos el objeto base
     const geoCilindro = new THREE.CylinderGeometry( 50, 50, 15, 50);
-    const base = new THREE.Mesh( geoCilindro, material );
+    base = new THREE.Mesh( geoCilindro, material );
     base.add(brazo);
     base.add(planta);
 
@@ -176,13 +180,42 @@ function loadScene(){
     //scene.add( new THREE.AxisHelper(100));
 }
 
+function setupGUI(){
+    // Definición del objeto controlador
+    effectController = {
+        giroBase: 0.0,
+        giroBrazo: 0.0,
+        giroAntebrazoY: 0.0,
+        giroAntebrazoZ: 0.0,
+        giroPinza: 0.0,
+        separacionPinza: 10,
+        alambres: false,
+        boton: animate
+    }
+
+    // Crear la GUI 
+    const gui = new GUI();
+
+    // Construir el menu de widgets
+    gui.title("Control robot");
+    const h = gui.addFolder("Controles");
+    h.add(effectController,"giroBase", -180.0, 180.0, 0.025).name("Giro de la base");
+    h.add(effectController,"giroBrazo", -45.0, 45.0, 0.025).name("Giro del brazo");
+    h.add(effectController,"giroAntebrazoY", -180.0, 180.0, 0.025).name("Giro del antebrazo en Y");
+    h.add(effectController,"giroAntebrazoZ", -90.0, 90.0, 0.025).name("Giro del antebrazo en Z");
+    h.add(effectController,"giroPinza", -40.0, 220.0, 0.025).name("Giro de la pinza");
+    h.add(effectController,"separacionPinza", 0.0, 15.0, 0.025).name("Separación de la Pinza");
+    h.add(effectController,"alambres", false ).name("Alambres");
+    h.add(effectController, 'boton').name('Animación');
+}
+
 function setOrtographicCameras(ar){
     let camaraOrtografica;
 
     if (ar>1){
-        camaraOrtografica = new THREE.OrthographicCamera( -L, L, L, -L, -200, 200);
+        camaraOrtografica = new THREE.OrthographicCamera( -L, L, L, -L, -300, 300);
     }else{
-        camaraOrtografica = new THREE.OrthographicCamera( -L, L, L, -L, -200, 200);
+        camaraOrtografica = new THREE.OrthographicCamera( -L, L, L, -L, -300, 300);
     }
 
     planta = camaraOrtografica.clone();
@@ -212,10 +245,63 @@ function updateAspectRatio(){
     planta.updateProjectionMatrix();
 }
 
-function update(){
-    angulo += 0.01;
-    //robot.rotation.y = angulo;
-    //antebrazo.rotation.z = -angulo;
+function movimientoBase(event){
+    if (event.code === "ArrowDown"){
+        baseX -= 5;
+    } else if (event.code === "ArrowUp"){
+        baseX += 5;
+    } else if (event.code === "ArrowLeft"){
+        baseZ -= 5;
+    } else if (event.code === "ArrowRight"){
+        baseZ += 5;
+    }
+}
+
+function animate(){
+
+    new TWEEN.Tween( robot.position)
+    .to( {x:[robot.position.x+100,robot.position.x+100], y:[robot.position.y+150,robot.position.y+100], z:[robot.position.z,robot.position.z]}, 2000)
+    .interpolation( TWEEN.Interpolation.CatmullRom )
+    .easing( TWEEN.Easing.Cubic.InOut)
+    .start()
+    .onComplete(()=>{
+        new TWEEN.Tween( robot.position)
+        .to( {x:[robot.position.x,robot.position.x], y:[robot.position.y+80,robot.position.y], z:[robot.position.z,robot.position.z]}, 1500)
+        .interpolation( TWEEN.Interpolation.CatmullRom )
+        .easing( TWEEN.Easing.Back.In)
+        .start()
+        .onComplete(()=>{
+            new TWEEN.Tween( robot.position)
+            .to( {x:[robot.position.x,robot.position.x], y:[robot.position.y+80,robot.position.y], z:[robot.position.z,robot.position.z]}, 1000)
+            .interpolation( TWEEN.Interpolation.CatmullRom )
+            .easing( TWEEN.Easing.Back.In)
+            .start()
+            .onComplete(() => {
+                new TWEEN.Tween( robot.position)
+                .to( {x:[robot.position.x,robot.position.x], y:[robot.position.y+100,robot.position.y-100], z:[robot.position.z,robot.position.z]}, 2000)
+                .interpolation( TWEEN.Interpolation.CatmullRom )
+                .easing( TWEEN.Easing.Elastic.InOut)
+                .start();
+            });
+        });
+    });
+}
+
+function update(delta){
+    robot.position.set(baseX,0,baseZ);
+    base.rotation.y = effectController.giroBase * Math.PI/180;
+    brazo.rotation.z = effectController.giroBrazo * Math.PI/180;
+    antebrazo.rotation.y = effectController.giroAntebrazoY * Math.PI/180;
+    antebrazo.rotation.z = effectController.giroAntebrazoZ * Math.PI/180;
+    mano.rotation.y = effectController.giroPinza * Math.PI/180;
+    pinzaIz.position.set(0,effectController.separacionPinza, -10);
+    pinzaDe.position.set(0,-effectController.separacionPinza, 10);
+    if(effectController.alambres){
+        material.wireframe = true;
+    }else{
+        material.wireframe = false;
+    }
+    TWEEN.update(delta);
 }
 
 function render(){
