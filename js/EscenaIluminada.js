@@ -90,7 +90,7 @@ function loadScene(){
     const matCubo = new THREE.MeshLambertMaterial( {color: 'red', map: texCubo});
     const entorno = ["./images/posx.jpg","./images/negx.jpg","./images/posy.jpg","./images/negy.jpg","./images/posz.jpg","./images/negz.jpg"];
     const texEsfera = new THREE.CubeTextureLoader().load(entorno);
-    const matEsfera = new THREE.MeshPhongMaterial( {color: 'white', specular: 'grey', shininess: 30, envMap: texEsfera});
+    const matEsfera = new THREE.MeshPhongMaterial( {color: 'grey', specular: 'grey', shininess: 30, envMap: texEsfera});
     const texSuelo = new THREE.TextureLoader().load("./images/wet_ground_512x512.jpg");
     const matSuelo = new THREE.MeshStandardMaterial( {color: 'grey', map: texSuelo});
     const geoCubo = new THREE.BoxGeometry( 2, 2, 2);
