@@ -1,0 +1,43 @@
+<!doctype html>
+<!--
+    trabajofinal.html
+    Plantilla de carga de aplicaciones Threejs
+-->
+<html lang="es">
+    <head>
+        <meta charset="utf-8">
+        <title>Trabajo Final de Gráficos por Computador</title>
+        <style>
+            body{ background-color: white;margin: 0px;overflow: hidden;}
+            #info {
+	            position: absolute;
+	            bottom: 0px;
+                left: 50px;
+	            width: 30%;
+	            text-align: left;
+	            z-index: 1; 
+            }
+        </style>
+    </head>
+    <body>
+
+        <div id="container"></div>
+
+
+        <div id="info">
+            <h2 style="color:white; font-family:verdana;">Utiliza las teclas W y S para girar las figuras en el eje X, A y D para girar en eje Y y Q y E para girar en eje Z. Para superar el nivel, la luz debe dar en el detector.</h2> 
+        </div>
+
+        <!-- Este enlace esta recomendado en la web de threejs -->
+        <!-- <script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script> -->
+
+        <!-- Declaracion del espacio de nombres three -->
+        <script type="importmap">
+        { "imports": { "three": "./lib/three.module.js" } }
+        </script>
+
+        <!-- Sustituir por el el script propio -->
+        <script type="module" src="js/TrabajoFinal.js"></script>
+
+    </body>
+</html>
